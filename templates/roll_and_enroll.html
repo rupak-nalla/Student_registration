@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Home
+    </title>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <h1>Student Details</h1>
+    <table id="personal-details">
+        <tr>
+            <th>Roll Number</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+        </tr>
+        
+        <tr>
+            <td>{{ students[0]['roll_number']}}</td>
+            <td>{{ students[0]['first_name']}}</td>
+            <td>{{ students[0]['last_name']}}</td>
+        </tr>
+        
+    </table>
+    <div><h1>Enrollment Table</h1></div>
+    
+    <table id = "enroll-table">
+          <tr>
+          <th>S. No.</th>
+          <th>Course Code</th>
+          <th>Course Name</th>
+          <th>Course Description</th>
+          </tr>
+            
+            {%for e in range(enrolled_c|length)%}
+            <tr>
+            <td>{{e+1}}</td>
+            <td>{{enrolled_c[e].course_code}}</td>
+            <td>{{enrolled_c[e].course_name}}</td>
+            <td>{{enrolled_c[e].course_description}}</td>
+            </tr>
+            {% endfor %}
+          
+    </table>
+    <a href="\" method="GET">Go Home</a>
+  </body>
+</html>
