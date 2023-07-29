@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Courses</title>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <a href="/">Go to Students</a>
+    <h1>Course list</h1>
+    {%if (empty!=True)%}
+    <table id = "all-courses">
+      <tr>
+          <th>SNo</th>
+          <th>Course Code</th>
+          <th>Course Name</th>
+          <th>Course Description</th>
+          <th>Actions</th>
+      </tr>
+      {%for i in range(coursess|length)%}
+      <tr>
+          <td>{{i+1}}</td>
+          <td><a href="/course/{{coursess[i]['course_id']}}">{{coursess[i]['course_code']}}</a></td>
+          <td>{{coursess[i]['course_name']}}</td>
+          <td>{{coursess[i]['course_description']}}</td>
+          <td>
+          <a href="/course/{{coursess[i]['course_id']}}/update">Update</a>
+          <a href="/course/{{coursess[i]['course_id']}}/delete">Delete</a>
+          </td>
+      </tr>
+      {%endfor%}
+    </table>
+    {%else%}
+    <p>No courses found.Add courses now!</p>
+    {%endif%}
+    <a href="/course/create">Add Course</a>
+  </body>
+</html>

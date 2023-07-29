@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Student Details
+    </title>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <h1>Student Details</h1>
+    <table id = 'student-detail'>
+        <tr>
+            <th>Roll Number</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+        </tr>
+        
+        <tr>
+            <td>{{ students[0]['roll_number']}}</td>
+            <td>{{ students[0]['first_name']}}</td>
+            <td>{{ students[0]['last_name']}}</td>
+        </tr>
+    {%if(empty_enroll!=True)%}
+    </table>
+    <div><h1>Enrollment Table</h1></div>
+    
+    <table id ="student-enrollments">
+      <thead>
+        <tr>
+          <th>SNo</th>
+          <th>Course Code</th>
+          <th>Course Name</th>
+          <th>Course Description</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+            {%for e in range(enrolled_c|length)%}
+            <tr>
+            <td>{{e+1}}</td>
+            <td>{{enrolled_c[e].course_code}}</td>
+            <td>{{enrolled_c[e].course_name}}</td>
+            <td>{{enrolled_c[e].course_description}}</td>
+            <td>
+<a href="/student/{{students[0]['student_id']}}/withdraw/{{enrolled_c[e]['course_id']}}">Withdraw</a>
+</td>
+            </tr>
+            {% endfor %}
+          
+      </tbody>    
+            
+        
+    </table>
+    {%endif%}
+    <a href="\" method="GET">Go Back</a>
+  </body>
+</html>

@@ -2,17 +2,17 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 from flask import render_template
 from flask import request
-from sqlalchemy import create_engine, update, delete
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.sqlite3"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///week7database.sqlite3"
 db = SQLAlchemy()
 db.init_app(app)
 app.app_context().push()
 
 s = "SELECT * FROM student"
-engine = create_engine("sqlite:///./database.sqlite3")
+engine = create_engine("sqlite:///./week7_database.sqlite3")
 
 
 class student(db.Model):
@@ -49,7 +49,6 @@ class enrollments(db.Model):
 def home():
   if (request.method == "GET"):
 
-    engine = create_engine("sqlite:///./database.sqlite3")
     with Session(engine) as session:
       count = session.query(student.student_id).count()
       stud = session.query(student).all()
@@ -65,44 +64,29 @@ def home():
 @app.route("/student/create", methods=["GET", "POST"])
 def add_student():
   if (request.method == "POST"):
-    engine = create_engine("sqlite:///./database.sqlite3")
     with Session(engine) as session:
       roll_no = request.form["roll"]
       '''checking for duplicationn'''
-
       count = session.query(student).filter(
         student.roll_number == roll_no).count()
-      
       if (count >= 1):
-
-        t = render_template("duplication.html")
+        t = render_template("duplicate_student.html")
         return (t)
       '''no duplication, so going for insertion '''
       f_name = request.form["f_name"]
       l_name = request.form["l_name"]
-      courses_selected = request.form.getlist("courses")
       '''insertion to table students'''
       new_student = student(roll_number=roll_no,
                             first_name=f_name,
                             last_name=l_name)
       session.add(new_student)
-      for i in courses_selected:
-        engine = create_engine("sqlite:///./database.sqlite3")
-        with engine.connect() as conn:
-          new_student_id = session.query(
-            student.student_id).filter(student.roll_number == roll_no).all()
-          '''insertion to enrollments'''
-          new_enrollment = enrollments(estudent_id=int(new_student_id[0][0]),
-                                       ecourse_id=int(i[-1]))
-          session.add(new_enrollment)
       session.commit()
       '''going back to home page'''
       stud = session.query(student).all()
       return (render_template("index.html", empty=False, students=stud))
 
   if (request.method == "GET"):
-    
-    return (render_template("Add_Student.html"))
+    return (render_template("add_student.html"))
 
 
 '''UPDATE STUDENT DETAILS'''
@@ -110,35 +94,28 @@ def add_student():
 
 @app.route("/student/<int:student_id>/update", methods=["POST", "GET"])
 def student_update(student_id):
-  engine = create_engine("sqlite:///./database.sqlite3")
   with Session(engine) as session:
-    stud = session.query(
-      student.first_name, student.last_name, student.roll_number,
-      student.student_id).filter(student.student_id == student_id).all()
+    stud = session.query(student).filter(
+      student.student_id == student_id).all()
+    c = session.query(course).all()
     if (request.method == "GET"):
-      return (render_template("update.html", students=stud))
+      return (render_template("update_student.html", students=stud, courses=c))
     if (request.method == "POST"):
       edited_fname = request.form.get("f_name")
       edited_lname = request.form.get("l_name")
-      edited_courses = request.form.getlist("courses")
+      edited_course = request.form.get("course")
       '''updating student table'''
-      stmt = update(student).where(student.student_id == student_id).values(
-        first_name=edited_fname, last_name=edited_lname)
-
-      with engine.connect() as conn:
-        conn.execute(stmt)
-        '''updating enrollments table'''
-        del_enroll = delete(enrollments).where(
-          enrollments.estudent_id == student_id)
-        conn.execute(del_enroll)
-        for i in edited_courses:
-          new_enrollment = enrollments(estudent_id=student_id,
-                                       ecourse_id=int(i[-1]))
-          session.add(new_enrollment)
-        session.commit()
-        '''returning to home page'''
-        stud = session.query(student).all()
-        return (render_template("index.html", empty=False, students=stud))
+      s = session.query(student).filter(
+        student.student_id == student_id).first()
+      s.first_name = edited_fname
+      s.last_name = edited_lname
+      session.commit()
+      new_enroll = enrollments(estudent_id=student_id,
+                               ecourse_id=edited_course)
+      session.add(new_enroll)
+      session.commit()
+      stud = session.query(student).all()
+      return (render_template("index.html", empty=False, students=stud))
 
 
 '''DELETE STUDENTS'''
@@ -147,22 +124,21 @@ def student_update(student_id):
 @app.route("/student/<int:student_id>/delete")
 def student_delete(student_id):
   '''deleting both student_id rows in enrollment and students'''
-  del_stud = delete(student).where(student.student_id == student_id)
-  del_enroll = delete(enrollments).where(enrollments.estudent_id == student_id)
-  stmt = "SELECT count(*) from student"
-  stud = "SELECT * FROM student"
+  with Session(engine) as session:
+    studs = session.query(student).all()
+
+    session.query(student).filter(student.student_id == student_id).delete()
+    session.query(enrollments).filter(
+      enrollments.estudent_id == student_id).delete()
+    counts = session.query(student).count()
+    studs = session.query(student).all()
+    session.commit()
+
+    if (counts > 0):
+      return render_template("index.html", empty=False, students=studs)
+    else:
+      return (render_template("index.html", empty=True, students=studs))
   '''returning to home page and executing deletion'''
-  engine = create_engine("sqlite:///./database.sqlite3")
-  with engine.connect() as conn:
-    conn.execute(del_stud)
-    conn.execute(del_enroll)
-    with Session(engine) as session:
-        count = session.query(student.student_id).count()
-        stud =session.query(student).all()
-        if (count == 0):
-          return (render_template("index.html", empty=True, students=stud))
-        else:
-          return (render_template("index.html", empty=False, students=stud))
 
 
 '''Roll numbers and enrollments'''
@@ -170,7 +146,6 @@ def student_delete(student_id):
 
 @app.route("/student/<int:student_id>")
 def Roll_and_enroll(student_id):
-  engine = create_engine("sqlite:///./database.sqlite3")
   with Session(engine) as session:
     stud = session.query(student).filter(
       student.student_id == student_id).all()
@@ -179,10 +154,116 @@ def Roll_and_enroll(student_id):
 
     enrolled_courses = session.query(course).filter(
       course.course_id.in_(enrolls)).all()
-    return (render_template("roll_and_enroll.html",
-                            students=stud,
-                            enrolled_c=enrolled_courses))
+    counts = len(enrolled_courses)
+    if (counts != 0):
+      return (render_template("enroll_stud.html",
+                              students=stud,
+                              enrolled_c=enrolled_courses,
+                              empty_enroll=False))
+    else:
+      return (render_template("enroll_stud.html",
+                              students=stud,
+                              enrolled_c=enrolled_courses,
+                              empty_enroll=True))
+
+
+#withdraw courses
+@app.route("/student/<int:student_id>/withdraw/<int:course_id>",
+           methods=["GET"])
+def withdraw(student_id, course_id):
+  with Session(engine) as session:
+    e = session.query(enrollments).filter(
+      enrollments.estudent_id == student_id
+      and enrollments.ecourse_id == course_id).first()
+    session.delete(e)
+    session.commit()
+    studs = session.query(student).all()
+    return (render_template("index.html", students=studs, empty=False))
+
+
+#courses list
+@app.route("/courses")
+def courses():
+  with Session(engine) as session:
+    c = session.query(course).all()
+    if (c):
+      return (render_template("courses.html", coursess=c, empty=False))
+    else:
+      return (render_template("courses.html", coursess=c, empty=True))
+
+
+#Add course
+@app.route("/course/create", methods=["POST", "GET"])
+def add_course():
+  with Session(engine) as session:
+    if (request.method == "GET"):
+      return (render_template("add_course.html"))
+    if (request.method == "POST"):
+      c_code = request.form["code"]
+      c_name = request.form["c_name"]
+      c_desc = request.form["desc"]
+      c = session.query(course).filter(course.course_code == c_code).first()
+      if (c):
+        return (render_template("duplicate_course.html"))
+
+      new_course = course(course_code=c_code,
+                          course_name=c_name,
+                          course_description=c_desc)
+      session.add(new_course)
+      session.commit()
+      c = session.query(course).all()
+      return (render_template("courses.html", coursess=c, empty=False))
+
+
+#update course
+@app.route("/course/<int:course_id>/update", methods=["GET", "POST"])
+def update_courses(course_id):
+  with Session(engine) as session:
+    if (request.method == "GET"):
+      c = session.query(course).filter(course.course_id == course_id).first()
+      return (render_template("update_course.html", coursess=c))
+    if (request.method == "POST"):
+      c_name = request.form["c_name"]
+      c_desc = request.form["desc"]
+      c = session.query(course).filter(course.course_id == course_id).first()
+      c.course_name = c_name
+      c.course_description = c_desc
+      session.commit()
+      c = session.query(course).all()
+      return (render_template("courses.html", coursess=c, empty=False))
+
+
+#delete course
+@app.route("/course/<int:course_id>/delete")
+def delete_course(course_id):
+  with Session(engine) as session:
+    session.query(course).filter(course.course_id == course_id).delete()
+    session.query(enrollments).filter(
+      enrollments.ecourse_id == course_id).delete()
+    session.commit()
+    c = session.query(course).all()
+    if (c):
+      return (render_template("courses.html", coursess=c, empty=False))
+    else:
+      return (render_template("courses.html", coursess=c, empty=True))
+
+
+#courses and enrolls
+@app.route("/course/<int:course_id>")
+def course_enrolls(course_id):
+  with Session(engine) as session:
+
+    enroll = session.query(enrollments.estudent_id).filter(
+      enrollments.ecourse_id == course_id).subquery()
+
+    enrolled_students = session.query(student).filter(
+      student.student_id.in_(enroll)).all()
+
+    c = session.query(course).filter(course.course_id == course_id).first()
+    return (render_template("enroll_course.html",
+                            coursess=c,
+                            enrolls=enrolled_students))
 
 
 if (__name__) == "__main__":
-  app.run(host="0.0.0.0", port=8080, debug=True)
+  app.run()
